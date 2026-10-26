@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>FaBlast</title>
+<style>
+:root{--bg:#101425;--panel:#1b2138;--cell:#29304a;--text:#f4f6ff;--muted:#aab2d3;--accent:#8b5cf6;--accent2:#22d3ee}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -10%,#34306b 0,#171a31 42%,var(--bg) 78%);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--text);display:flex;justify-content:center;align-items:center;padding:14px;touch-action:manipulation}
+.app{width:min(100%,470px)}
+header{text-align:center;margin:4px 0 14px}
+.logo{font-size:clamp(2.1rem,9vw,3.1rem);font-weight:1000;letter-spacing:2px;line-height:1;background:linear-gradient(100deg,#a78bfa,#67e8f9 60%,#f0abfc);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 8px 35px #8b5cf644}
+.tag{color:var(--muted);font-size:.82rem;margin-top:7px;letter-spacing:.8px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.stat{background:#1b2138dd;border:1px solid #ffffff12;border-radius:15px;padding:10px 14px;text-align:center;box-shadow:0 8px 25px #0002}
+.stat span{display:block;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:1px}
+.stat strong{font-size:1.45rem;font-weight:850}
+.board-wrap{background:linear-gradient(145deg,#252b48,#171c31);padding:9px;border:1px solid #ffffff20;border-radius:17px;box-shadow:0 18px 45px #0005}
+.board{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:4px;aspect-ratio:1;width:100%;touch-action:manipulation}
+.cell{min-width:0;border-radius:5px;background:var(--cell);border:1px solid #ffffff06;transition:background .08s,transform .08s}
+.cell.filled{background:var(--c,#8b5cf6);border:1px solid #ffffff45;box-shadow:inset 0 2px 0 #ffffff30,inset 0 -3px 0 #0002}
+.cell.preview{background:#67e8f9!important;outline:2px solid #cffafe;transform:scale(.94)}
+.cell.bad{background:#fb7185!important}
+.message{height:26px;text-align:center;color:#d9defb;font-size:.85rem;padding-top:7px}
+.pieces{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 12px}
+.piece-slot{height:104px;background:#1b2138c9;border:1px solid #ffffff12;border-radius:14px;display:flex;align-items:center;justify-content:center;cursor:grab;position:relative;transition:.15s;touch-action:none;user-select:none;-webkit-user-select:none}.piece-slot:active{cursor:grabbing}.drag-ghost{position:fixed;z-index:20;pointer-events:none;opacity:.92;filter:drop-shadow(0 10px 16px #0008);transform:translate(-50%,-50%) scale(1.08)}
+.piece-slot.selected{border-color:#a78bfa;box-shadow:0 0 0 2px #8b5cf655;background:#282344}
+.piece-slot.used{opacity:.18;pointer-events:none}
+.mini{display:grid;gap:3px;max-width:78px;max-height:78px}
+.mini-block{width:19px;height:19px;border-radius:4px;background:var(--c);border:1px solid #ffffff4d;box-shadow:inset 0 2px 0 #ffffff30}
+.mini-empty{width:19px;height:19px}
+.controls{display:flex;gap:9px}
+button{border:0;color:white;font:inherit;font-weight:750;border-radius:12px;padding:12px 14px;cursor:pointer}
+.primary{flex:1;background:linear-gradient(100deg,#7c3aed,#6366f1);box-shadow:0 7px 20px #6d28d933}
+.secondary{background:#29304a;border:1px solid #ffffff16}
+.help{text-align:center;color:var(--muted);font-size:.76rem;line-height:1.5;margin-top:12px}
+.overlay{position:fixed;inset:0;background:#080b17d9;display:none;align-items:center;justify-content:center;padding:20px;z-index:5}
+.overlay.show{display:flex}
+.modal{width:min(100%,340px);background:#202641;border:1px solid #ffffff24;border-radius:22px;padding:25px;text-align:center;box-shadow:0 20px 70px #0008}
+.modal h2{margin:0 0 7px;font-size:1.8rem}
+.modal p{color:var(--muted);line-height:1.5}
+.modal button{width:100%;margin-top:8px}
+@media(max-height:720px){body{padding:8px}.logo{font-size:2.2rem}header{margin-bottom:8px}.stat{padding:6px}.piece-slot{height:82px}.mini-block,.mini-empty{width:15px;height:15px}.mini{gap:2px}.help{margin-top:7px}}
+</style>
+</head>
+<body>
+<main class="app">
+  <header><div class="logo">FaBlast</div><div class="tag">SUSUN BLOK • BERSIHKAN PAPAN • CETAK REKOR</div></header>
+  <section class="stats">
+    <div class="stat"><span>Skor</span><strong id="score">0</strong></div>
+    <div class="stat"><span>Rekor</span><strong id="best">0</strong></div>
+  </section>
+  <div class="board-wrap"><div id="board" class="board" aria-label="Papan permainan"></div></div>
+  <div id="message" class="message">Pilih blok, lalu ketuk papan untuk menaruhnya.</div>
+  <div id="pieces" class="pieces"></div>
+  <div class="controls"><button class="secondary" id="musicBtn">🎵 Putar Musik</button><button class="primary" id="newGame">↻ Game Baru</button><button class="secondary" id="soundBtn">♪ Suara: Mati</button></div>
+  <div class="help">Penuhi satu baris atau kolom untuk membersihkannya.<br>Blok yang sudah diletakkan tidak bisa dipindahkan.</div>
+</main>
+<div id="overlay" class="overlay"><div class="modal"><h2>Game Over!</h2><p id="finalText">Skor kamu: 0</p><button class="primary" id="playAgain">Main Lagi</button></div></div>
+<script>
+(() => {
+ const N=10;
+ const palette=['#8b5cf6','#06b6d4','#f97316','#ec4899','#22c55e','#eab308','#3b82f6'];
+ const shapes=[
+  [[0,0]],[[0,0],[0,1]],[[0,0],[1,0]],[[0,0],[0,1],[0,2]],[[0,0],[1,0],[2,0]],
+  [[0,0],[0,1],[1,0],[1,1]],[[0,0],[0,1],[0,2],[1,1]],[[0,0],[1,0],[2,0],[1,1]],
+  [[0,0],[1,0],[2,0],[0,1]],[[0,0],[0,1],[0,2],[1,2]],[[0,0],[1,0],[1,1],[2,1]],
+  [[0,1],[1,0],[1,1],[1,2]],[[0,0],[1,0],[2,0],[3,0]],[[0,0],[0,1],[0,2],[0,3]],
+  [[0,0],[1,0],[2,0],[3,0],[4,0]],[[0,0],[0,1],[0,2],[0,3],[0,4]],
+  [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]],[[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]],
+  [[0,0],[1,0],[2,0],[2,1],[2,2]],[[0,0],[0,1],[1,1],[2,1],[2,2]]
+ ];
+ let grid,score,best,queue,selected=-1,gameOver=false,sound=false,audioCtx=null,dragging=null,ghost=null;
+ const board=document.getElementById('board'),piecesEl=document.getElementById('pieces');
+ const scoreEl=document.getElementById('score'),bestEl=document.getElementById('best'),msg=document.getElementById('message');
+ best=Number(localStorage.getItem('fablast-best')||0);bestEl.textContent=best;
+ function init(){grid=Array.from({length:N},()=>Array(N).fill(null));score=0;queue=[];selected=-1;gameOver=false;document.getElementById('overlay').classList.remove('show');scoreEl.textContent='0';for(let i=0;i<3;i++)queue.push(makePiece());renderBoard();renderPieces();message('Pilih blok, lalu ketuk papan untuk menaruhnya.');}
+ function makePiece(){return {shape:shapes[Math.floor(Math.random()*shapes.length)].map(p=>p.slice()),color:palette[Math.floor(Math.random()*palette.length)],used:false};}
+ function message(t){msg.textContent=t;}
+ function renderBoard(){board.innerHTML='';for(let r=0;r<N;r++)for(let c=0;c<N;c++){const el=document.createElement('div');el.className='cell'+(grid[r][c]?' filled':'');if(grid[r][c])el.style.setProperty('--c',grid[r][c]);el.dataset.r=r;el.dataset.c=c;el.addEventListener('click',()=>placeAt(r,c));el.addEventListener('mouseenter',()=>{});board.appendChild(el);}}
+ function renderPieces(){piecesEl.innerHTML='';queue.forEach((p,i)=>{const slot=document.createElement('div');slot.className='piece-slot'+(p.used?' used':'')+(i===selected?' selected':'');slot.setAttribute('aria-label','Pilih blok '+(i+1));if(!p.used){const maxR=Math.max(...p.shape.map(x=>x[0]))+1,maxC=Math.max(...p.shape.map(x=>x[1]))+1;const mini=document.createElement('div');mini.className='mini';mini.style.gridTemplateColumns=`repeat(${maxC},19px)`;let set=new Set(p.shape.map(x=>x.join(',')));for(let r=0;r<maxR;r++)for(let c=0;c<maxC;c++){const b=document.createElement('div');b.className=set.has(r+','+c)?'mini-block':'mini-empty';if(set.has(r+','+c))b.style.setProperty('--c',p.color);mini.appendChild(b);}slot.appendChild(mini);}slot.addEventListener('click',()=>{if(p.used||gameOver||dragging)return;selected=i;renderPieces();message('Blok dipilih. Kamu juga bisa menggeser balok ke papan.');});
+ slot.addEventListener('pointerdown',e=>{if(p.used||gameOver)return;e.preventDefault();selected=i;dragging={index:i,pointerId:e.pointerId};slot.classList.add('selected');ghost=mini.cloneNode(true);ghost.classList.add('drag-ghost');ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';document.body.appendChild(ghost);updatePreviewAt(e.clientX,e.clientY);});
+ piecesEl.appendChild(slot);});}
+
+ function clearPreview(){board.querySelectorAll('.preview,.bad').forEach(x=>x.classList.remove('preview','bad'));}
+ function updatePreviewAt(x,y){
+   clearPreview();
+   if(!dragging||selected<0||!queue[selected]||queue[selected].used)return;
+   const under=document.elementFromPoint(x,y),cell=under&&under.closest?under.closest('.cell'):null;
+   if(!cell)return;
+   const r=+cell.dataset.r,c=+cell.dataset.c,p=queue[selected],valid=canPlace(p,r,c);
+   p.shape.forEach(([dr,dc])=>{const target=board.querySelector(`[data-r="${r+dr}"][data-c="${c+dc}"]`);if(target)target.classList.add(valid?'preview':'bad');});
+ }
+ document.addEventListener('pointermove',e=>{
+   if(!dragging||e.pointerId!==dragging.pointerId)return;
+   if(ghost){ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';}
+   updatePreviewAt(e.clientX,e.clientY);
+ });
+ document.addEventListener('pointerup',e=>{
+   if(!dragging||e.pointerId!==dragging.pointerId)return;
+   const under=document.elementFromPoint(e.clientX,e.clientY),cell=under&&under.closest?under.closest('.cell'):null;
+   const idx=dragging.index;
+   if(ghost){ghost.remove();ghost=null;}
+   dragging=null;clearPreview();
+   if(cell){selected=idx;placeAt(+cell.dataset.r,+cell.dataset.c);}
+   else {selected=idx;renderPieces();message('Geser balok ke papan, lalu lepaskan untuk menaruhnya.');}
+ });
+ document.addEventListener('pointercancel',()=>{if(ghost){ghost.remove();ghost=null;}dragging=null;clearPreview();renderPieces();});
+
+ function canPlace(piece,r,c){return piece.shape.every(([dr,dc])=>r+dr>=0&&r+dr<N&&c+dc>=0&&c+dc<N&&!grid[r+dr][c+dc]);}
+ function placeAt(r,c){if(gameOver)return;if(selected<0||!queue[selected]||queue[selected].used){message('Pilih salah satu blok terlebih dahulu.');return;}const p=queue[selected];if(!canPlace(p,r,c)){message('Blok tidak muat di sana. Coba posisi lain!');return;}p.shape.forEach(([dr,dc])=>grid[r+dr][c+dc]=p.color);score+=p.shape.length;playTone(440,.045);let rows=[],cols=[];for(let i=0;i<N;i++){if(grid[i].every(Boolean))rows.push(i);if(grid.every(row=>row[i]))cols.push(i);}const clearSet=new Set();rows.forEach(r=>{for(let c=0;c<N;c++)clearSet.add(r+','+c)});cols.forEach(c=>{for(let r=0;r<N;r++)clearSet.add(r+','+c)});if(clearSet.size){clearSet.forEach(key=>{let [rr,cc]=key.split(',').map(Number);grid[rr][cc]=null;});score+=clearSet.size+((rows.length+cols.length)>1?10*(rows.length+cols.length):0);playTone(660,.09);message(`Mantap! ${rows.length} baris dan ${cols.length} kolom dibersihkan.`);}else message('Bagus! Lanjut susun blokmu.');p.used=true;selected=-1;if(score>best){best=score;localStorage.setItem('fablast-best',best);}scoreEl.textContent=score;bestEl.textContent=best;renderBoard();if(queue.every(x=>x.used)){queue=[makePiece(),makePiece(),makePiece()];renderPieces();}else renderPieces();checkOver();}
+ function checkOver(){const available=queue.filter(p=>!p.used);if(available.length&&available.every(p=>!hasAnyMove(p))){gameOver=true;document.getElementById('finalText').textContent=`Skor kamu: ${score} • Rekor: ${best}`;document.getElementById('overlay').classList.add('show');} }
+ function hasAnyMove(p){for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(canPlace(p,r,c))return true;return false;}
+ function playTone(freq,duration){if(!sound)return;try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.frequency.value=freq;o.type='sine';g.gain.value=.05;o.connect(g);g.connect(audioCtx.destination);o.start();g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);o.stop(audioCtx.currentTime+duration);}catch(e){}}
+ document.getElementById('newGame').addEventListener('click',init);document.getElementById('playAgain').addEventListener('click',init);
+ document.getElementById('soundBtn').addEventListener('click',()=>{sound=!sound;document.getElementById('soundBtn').textContent='♪ Suara: '+(sound?'Nyala':'Mati');if(sound)playTone(520,.08);});
+ // Preview a potential placement while pressing a board cell.
+ board.addEventListener('pointerover',e=>{if(dragging)return;const cell=e.target.closest('.cell');if(!cell||selected<0||!queue[selected]||queue[selected].used)return;board.querySelectorAll('.preview,.bad').forEach(x=>x.classList.remove('preview','bad'));const r=+cell.dataset.r,c=+cell.dataset.c,p=queue[selected],valid=canPlace(p,r,c);p.shape.forEach(([dr,dc])=>{const target=board.querySelector(`[data-r="${r+dr}"][data-c="${c+dc}"]`);if(target)target.classList.add(valid?'preview':'bad');});});
+ board.addEventListener('pointerleave',()=>board.querySelectorAll('.preview,.bad').forEach(x=>x.classList.remove('preview','bad')));
+ init();
+})();
+</script>
+<!-- Letakkan lagu.mp3 di folder yang sama dengan FaBlast.html -->
+<audio id="bgMusic" src="lagu.mp3" loop preload="auto"></audio>
+<script>
+(() => {
+  const music = document.getElementById('bgMusic');
+  const button = document.getElementById('musicBtn');
+  if (!music || !button) return;
+  music.volume = 0.35;
+  button.addEventListener('click', async () => {
+    if (music.paused) {
+      try {
+        await music.play();
+        button.textContent = '⏸ Matikan Musik';
+      } catch (error) {
+        alert('Musik belum bisa diputar. Pastikan file lagu.mp3 berada di folder yang sama dengan FaBlast.html.');
+      }
+    } else {
+      music.pause();
+      button.textContent = '🎵 Putar Musik';
+    }
+  });
+})();
+</script>
+</body>
+</html>
